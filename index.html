@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Papan Pesan Digital - Prof. Dr. H. Sukadiono, dr., MM.</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for better typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles to complement Tailwind */
+        body {
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden; /* Prevent scrolling on the main body */
+        }
+
+        /* The main container with the background image */
+        .main-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            /* PENTING: Pastikan file 'ProfSukoOverlay.png' ada di folder yang sama */
+            background: url('ProfSukoOverlay.png') no-repeat center center;
+            background-size: cover;
+        }
+
+        /* Grid gallery for messages */
+        .grid-gallery {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* Fixed 4 columns */
+            grid-template-rows: repeat(3, 1fr);    /* Fixed 3 rows */
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+
+        /* Container for each grid item. This controls the shape. */
+        .grid-item {
+            aspect-ratio: 16 / 10;
+            border-radius: 1rem; /* Slightly smaller radius */
+            overflow: hidden;
+            /* Softer, more realistic shadow */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0; /* Start as transparent for animation */
+            transform: translateY(30px); /* Start slightly lower for fly-in animation */
+        }
+        
+        .grid-item:hover {
+            transform: scale(1.05) !important; /* Use !important to override random rotation transform */
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.08);
+        }
+
+        /* The image inside the grid item. It will fill the container. */
+        .grid-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Animation classes */
+        .grid-item.visible {
+            animation: flyInUp 0.6s ease-out forwards;
+        }
+
+        @keyframes flyInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        /* Pagination dots styling */
+        .pagination-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.2); /* Darker dots for better visibility */
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .pagination-dot:hover {
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        .pagination-dot.active {
+            background-color: #003366; /* Active dot color */
+            transform: scale(1.2);
+        }
+
+        /* Canvas container */
+        #drawing-canvas {
+            position: absolute;
+            top: 11.1%;
+            left: 28.1%;
+            width: 65.1%;
+            height: 74.1%;
+            touch-action: none;
+            border-radius: 1.5rem;
+        }
+
+        /* Touch-friendly toolbar */
+        .toolbar-touch {
+            position: absolute;
+            bottom: 2%;
+            left: 50%;
+            transform: translate(-50%, 150%);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background-color: rgba(40, 40, 40, 0.9);
+            padding: 1rem 1.5rem;
+            border-radius: 9999px; /* Pill shape */
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 3;
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .toolbar-touch.visible {
+            transform: translate(-50%, 0);
+        }
+
+        .toolbar-touch .tool-group{display:flex;align-items:center;gap:.75rem}.toolbar-touch .separator{width:1px;height:40px;background-color:rgba(255,255,255,.2)}.tool-button,.color-swatch{width:56px;height:56px;border-radius:50%;border:2px solid transparent;cursor:pointer;display:flex;justify-content:center;align-items:center;transition:all .2s ease;background-color:rgba(255,255,255,.1)}.tool-button:hover,.color-swatch:hover{background-color:rgba(255,255,255,.2);transform:scale(1.1)}.tool-button.active,.color-swatch.active{border-color:#3b82f6;background-color:rgba(59,130,246,.3)}.color-swatch span{width:36px;height:36px;border-radius:50%;display:block;border:2px solid rgba(0,0,0,.2)}.brush-size-button span{display:block;background-color:#fff;border-radius:50%}.tool-button:disabled{opacity:.5;cursor:not-allowed;transform:scale(1) !important;background-color:rgba(255,255,255,.1) !important}
+
+        /* Integrated Idle Screen Styling */
+        #idle-screen {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            transition: opacity 0.8s ease;
+            border-radius: 1.5rem; /* Match the canvas shape */
+            color: #333;
+        }
+
+        .typing-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 2.5rem;
+            background-color: #003366;
+            animation: blink-caret .8s step-end infinite;
+            vertical-align: bottom;
+        }
+
+        @keyframes blink-caret {
+            from, to { background-color: transparent }
+            50% { background-color: #003366; }
+        }
+
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+
+    <!-- Main Container with Background -->
+    <div class="main-container"></div>
+
+    <!-- Gallery Section Wrapper -->
+    <div id="gallery-section" class="absolute top-[11.1%] left-[28.1%] w-[65.1%] h-[74.1%]">
+        <div class="grid-gallery" id="gallery">
+            <!-- Message images will be populated here by JavaScript -->
+        </div>
+        <!-- Integrated Idle Screen -->
+        <div id="idle-screen" class="absolute inset-0 flex items-center justify-center p-12 opacity-0 pointer-events-none cursor-pointer">
+            <div class="text-center">
+                <h1 id="typing-heading" class="text-5xl font-bold mb-4" style="font-family: 'Playfair Display', serif;"></h1>
+                <p class="text-xl mt-8 opacity-70">(Sentuh di mana saja untuk memulai)</p>
+            </div>
+        </div>
+        
+        <!-- Container for bottom controls -->
+        <div id="bottom-controls" class="absolute left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-3 w-full">
+            <!-- Pagination Dots Container -->
+            <div id="pagination-dots" class="flex gap-3 h-4 items-center">
+                <!-- Dots will be populated by JavaScript -->
+            </div>
+
+            <!-- Main "Write Message" Button -->
+            <button id="open-canvas-btn" class="flex items-center gap-4 px-8 py-5 bg-blue-600 text-white text-2xl font-bold rounded-full shadow-2xl hover:bg-blue-700 transition-all duration-300 transform hover:scale-105">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+                Tulis Pesan
+            </button>
+        </div>
+    </div>
+
+    <!-- Canvas Section (hidden by default) -->
+    <div id="canvas-container" class="hidden">
+        <canvas id="drawing-canvas"></canvas>
+        <div id="toolbar" class="toolbar-touch">
+            <!-- Toolbar content -->
+            <div class="tool-group" id="color-palette"></div><div class="separator"></div><div class="tool-group" id="brush-sizes"></div><div class="separator"></div><div class="tool-group"><button id="undo-btn" class="tool-button" title="Urungkan"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button><button id="clear-canvas-btn" class="tool-button" title="Hapus Goresan"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.54 21.46-5.3-5.3"/><path d="M11 21H5a2 2 0 0 1-2-2V7h14v4"/><path d="M3 7V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4"/><path d="M12.5 2.5 10.5 7h5l-2-4.5Z"/><path d="M18 13h-5"/><path d="m21.54 16.16-5.3 5.3"/></svg></button><button id="submit-btn" class="tool-button bg-green-500 hover:bg-green-600" title="Kirim Pesan"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg></button><button id="close-canvas-btn" class="tool-button bg-red-500 hover:bg-red-600" title="Tutup Kanvas"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
+        </div>
+    </div>
+
+    <!-- Modal for viewing a single message -->
+    <div id="modal-view" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden items-center justify-center p-8 transition-opacity duration-300">
+        <div class="relative w-full max-w-6xl max-h-full">
+            <img id="modal-img" src="" alt="Preview Pesan" class="block w-full h-full object-contain">
+            <button onclick="closeModal()" class="absolute -top-4 -right-4 w-14 h-14 bg-white text-black rounded-full text-2xl font-bold shadow-lg flex items-center justify-center">&times;</button>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center transition-opacity duration-300">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-8 text-center w-full max-w-md">
+            <h3 class="text-2xl font-bold mb-4">Konfirmasi</h3>
+            <p id="confirm-modal-text" class="text-gray-300 mb-8">Apakah Anda yakin ingin menghapus semua pesan?</p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-yes" class="px-8 py-3 bg-red-600 hover:bg-red-700 rounded-full font-bold transition-colors">Ya, Hapus</button>
+                <button id="confirm-no" class="px-8 py-3 bg-gray-600 hover:bg-gray-500 rounded-full font-bold transition-colors">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- "Thank You" Toast Notification -->
+    <div id="thank-you-toast" class="fixed top-10 left-1/2 -translate-x-1/2 bg-green-500 text-white px-8 py-4 rounded-full shadow-lg text-xl font-bold z-50 transition-all duration-500 opacity-0 -translate-y-20">
+        Terima kasih! Pesan Anda telah disimpan.
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        const gallerySection = document.getElementById('gallery-section');
+        const canvasContainer = document.getElementById('canvas-container');
+        const openCanvasBtn = document.getElementById('open-canvas-btn');
+        const modalView = document.getElementById('modal-view');
+        const modalImg = document.getElementById('modal-img');
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmModalText = document.getElementById('confirm-modal-text');
+        const confirmYesBtn = document.getElementById('confirm-yes');
+        const confirmNoBtn = document.getElementById('confirm-no');
+        const colorPaletteContainer = document.getElementById('color-palette');
+        const brushSizesContainer = document.getElementById('brush-sizes');
+        const paginationDotsContainer = document.getElementById('pagination-dots');
+        const toolbar = document.getElementById('toolbar');
+        const thankYouToast = document.getElementById('thank-you-toast');
+        const undoBtn = document.getElementById('undo-btn');
+        const idleScreen = document.getElementById('idle-screen');
+        const typingHeading = document.getElementById('typing-heading');
+        const bottomControls = document.getElementById('bottom-controls');
+
+        // --- State ---
+        let drawing = false;
+        let brushSize = 10;
+        let brushColor = '#000000';
+        let confirmCallback = null;
+        
+        // --- Slideshow State ---
+        let slideshowInterval;
+        let currentPage = 0;
+        const NOTES_PER_PAGE = 12;
+        const SLIDESHOW_DELAY = 15000;
+
+        // --- Undo Stack & Idle Timer ---
+        let historyStack = [];
+        let idleTimer;
+        let typeWriterTimeout;
+        const IDLE_TIMEOUT = 10000; // 30 seconds
+
+        // --- Config ---
+        const colors = ['#000000', '#FFFFFF', '#ef4444', '#3b82f6', '#22c55e', '#f97316', '#eab308'];
+        const brushSizes = [
+            { size: 5,  display: '12px' },
+            { size: 10, display: '20px' },
+            { size: 20, display: '28px' },
+            { size: 40, display: '36px' }
+        ];
+        const idleText = "Silakan tinggalkan pesan Anda...";
+
+        // --- Initialization ---
+        function initializeUI() {
+            // Populate toolbars
+            colors.forEach(color => {
+                const swatch = document.createElement('button');
+                swatch.className = 'color-swatch';
+                swatch.dataset.color = color;
+                swatch.innerHTML = `<span style="background-color: ${color};"></span>`;
+                swatch.onclick = () => setBrushColor(color);
+                colorPaletteContainer.appendChild(swatch);
+            });
+            brushSizes.forEach(brush => {
+                const button = document.createElement('button');
+                button.className = 'tool-button brush-size-button';
+                button.dataset.size = brush.size;
+                button.innerHTML = `<span style="width:${brush.display}; height:${brush.display};"></span>`;
+                button.onclick = () => setBrushSize(brush.size);
+                brushSizesContainer.appendChild(button);
+            });
+            
+            updateActiveTools();
+            updateUndoButton();
+            startSlideshow();
+            showIdleScreen(); // Show on initial load
+        }
+        
+        // --- Canvas & Drawing Logic ---
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            restoreState();
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches ? e.touches[0] : e;
+            return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+        }
+
+        function startDrawing(e) {
+            e.preventDefault();
+            drawing = true;
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            ctx.lineWidth = brushSize;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = brushColor;
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function stopDrawing() {
+            if (!drawing) return;
+            drawing = false;
+            ctx.beginPath();
+            saveState();
+        }
+
+        // --- Undo Logic ---
+        function saveState() {
+            historyStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            updateUndoButton();
+        }
+
+        function restoreState() {
+            if (historyStack.length > 0) {
+                ctx.putImageData(historyStack[historyStack.length - 1], 0, 0);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        function undo() {
+            if (historyStack.length > 1) {
+                historyStack.pop();
+                restoreState();
+                updateUndoButton();
+            }
+        }
+
+        function updateUndoButton() {
+            undoBtn.disabled = historyStack.length <= 1;
+        }
+
+        // --- UI Control Functions ---
+        function setBrushColor(color) { brushColor = color; updateActiveTools(); }
+        function setBrushSize(size) { brushSize = size; updateActiveTools(); }
+        function updateActiveTools() {
+            document.querySelectorAll('.color-swatch').forEach(s => s.classList.toggle('active', s.dataset.color === brushColor));
+            document.querySelectorAll('.brush-size-button').forEach(b => b.classList.toggle('active', parseInt(b.dataset.size) === brushSize));
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            historyStack = [];
+            saveState();
+        }
+
+        function showThankYouToast() {
+            thankYouToast.classList.remove('opacity-0', '-translate-y-20');
+            setTimeout(() => {
+                thankYouToast.classList.add('opacity-0', '-translate-y-20');
+            }, 3000);
+        }
+
+        function submitNote() {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            tempCtx.fillStyle = 'white';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(canvas, 0, 0);
+            const dataURL = tempCanvas.toDataURL('image/png');
+            
+            const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+            notes.unshift(dataURL);
+            localStorage.setItem('notes', JSON.stringify(notes));
+            
+            clearCanvas();
+            closeCanvasView();
+            showThankYouToast();
+        }
+
+        // --- View/Screen Management ---
+        function openCanvasView() {
+            clearInterval(slideshowInterval);
+            hideIdleScreen();
+            canvasContainer.classList.remove('hidden');
+            gallerySection.style.opacity = '0';
+            bottomControls.classList.add('hidden');
+            toolbar.classList.add('visible');
+            requestAnimationFrame(() => {
+                resizeCanvas();
+                clearCanvas();
+            });
+        }
+
+        function closeCanvasView() {
+            canvasContainer.classList.add('hidden');
+            gallerySection.style.opacity = '1';
+            bottomControls.classList.remove('hidden');
+            toolbar.classList.remove('visible');
+            startSlideshow();
+            resetIdleTimer();
+        }
+
+        // --- Grid & Slideshow Logic ---
+        function renderPage() {
+            const gallery = document.getElementById('gallery');
+            const allNotes = JSON.parse(localStorage.getItem('notes') || '[]');
+            
+            gallery.innerHTML = '';
+            paginationDotsContainer.innerHTML = '';
+
+            if (allNotes.length === 0) {
+                paginationDotsContainer.style.display = 'none';
+                return;
+            } else {
+                paginationDotsContainer.style.display = 'flex';
+            }
+
+            const pageCount = Math.ceil(allNotes.length / NOTES_PER_PAGE);
+            if (currentPage >= pageCount) currentPage = 0;
+            
+            const start = currentPage * NOTES_PER_PAGE;
+            const end = start + NOTES_PER_PAGE;
+            const notesToDisplay = allNotes.slice(start, end);
+
+            notesToDisplay.forEach((note, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'grid-item';
+                
+                const randomRotation = Math.random() * 4 - 2;
+                itemDiv.style.transform = `rotate(${randomRotation}deg)`;
+
+                const img = document.createElement('img');
+                img.src = note;
+                img.loading = 'lazy';
+                img.onclick = () => viewNote(note);
+                
+                itemDiv.appendChild(img);
+                gallery.appendChild(itemDiv);
+
+                setTimeout(() => {
+                    itemDiv.classList.add('visible');
+                    itemDiv.style.transform = `translateY(0) rotate(${randomRotation}deg)`;
+                }, index * 80);
+            });
+
+            if (pageCount > 1) {
+                for (let i = 0; i < pageCount; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'pagination-dot';
+                    if (i === currentPage) dot.classList.add('active');
+                    dot.onclick = () => goToPage(i);
+                    paginationDotsContainer.appendChild(dot);
+                }
+            } else {
+                 paginationDotsContainer.style.display = 'none';
+            }
+        }
+
+        function goToPage(pageNumber) {
+            currentPage = pageNumber;
+            renderPage();
+            clearInterval(slideshowInterval);
+            slideshowInterval = setInterval(nextSlideshowPage, SLIDESHOW_DELAY);
+        }
+
+        function nextSlideshowPage() {
+             const allNotes = JSON.parse(localStorage.getItem('notes') || '[]');
+             const pageCount = Math.ceil(allNotes.length / NOTES_PER_PAGE);
+             if (pageCount > 1) currentPage = (currentPage + 1) % pageCount;
+             renderPage();
+        }
+        
+        function startSlideshow() {
+            clearInterval(slideshowInterval);
+            renderPage();
+            slideshowInterval = setInterval(nextSlideshowPage, SLIDESHOW_DELAY);
+        }
+
+        function viewNote(dataURL) {
+            clearInterval(slideshowInterval);
+            hideIdleScreen(false); // Hide without resetting timer
+            modalImg.src = dataURL; // Set src here
+            modalView.classList.remove('hidden');
+            modalView.classList.add('flex');
+            requestAnimationFrame(() => {
+                modalView.style.opacity = 1;
+            });
+        }
+
+        function closeModal() {
+            modalView.style.opacity = 0;
+            setTimeout(() => {
+                modalView.classList.add('hidden');
+                modalView.classList.remove('flex');
+                startSlideshow();
+                resetIdleTimer();
+            }, 300);
+        }
+
+        // --- Modal & Idle Screen Logic ---
+        function showConfirm(text, callback) {
+            clearInterval(slideshowInterval);
+            hideIdleScreen(false);
+            confirmModalText.textContent = text;
+            confirmCallback = callback;
+            confirmModal.classList.remove('hidden');
+            confirmModal.classList.add('flex');
+            requestAnimationFrame(() => confirmModal.style.opacity = 1);
+        }
+
+        function hideConfirm() {
+            confirmModal.style.opacity = 0;
+            setTimeout(() => {
+                confirmModal.classList.add('hidden');
+                confirmModal.classList.remove('flex');
+                confirmCallback = null;
+                startSlideshow();
+                resetIdleTimer();
+            }, 300);
+        }
+
+        function typeWriter(element, text, i = 0) {
+            clearTimeout(typeWriterTimeout);
+            if (i < text.length) {
+                element.innerHTML = text.substring(0, i + 1) + '<span class="typing-cursor"></span>';
+                typeWriterTimeout = setTimeout(() => typeWriter(element, text, i + 1), 90);
+            } else {
+                element.innerHTML = text; // Remove cursor at the end
+            }
+        }
+        
+        function showIdleScreen() {
+            idleScreen.classList.remove('opacity-0', 'pointer-events-none');
+            typeWriter(typingHeading, idleText);
+        }
+
+        function hideIdleScreen(resetTimer = true) {
+            idleScreen.classList.add('opacity-0', 'pointer-events-none');
+            clearTimeout(typeWriterTimeout);
+            if (resetTimer) {
+                resetIdleTimer();
+            }
+        }
+
+        function resetIdleTimer() {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(showIdleScreen, IDLE_TIMEOUT);
+        }
+
+        function clearAllNotes() {
+            showConfirm('Apakah Anda yakin ingin menghapus SEMUA pesan? Tindakan ini tidak dapat diurungkan.', (confirmed) => {
+                if (confirmed) {
+                    localStorage.removeItem('notes');
+                    currentPage = 0;
+                    startSlideshow();
+                }
+            });
+        }
+
+        // --- Event Listeners ---
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+        
+        openCanvasBtn.addEventListener('click', openCanvasView);
+        document.getElementById('close-canvas-btn').addEventListener('click', closeCanvasView);
+        document.getElementById('submit-btn').addEventListener('click', submitNote);
+        document.getElementById('clear-canvas-btn').addEventListener('click', clearCanvas);
+        undoBtn.addEventListener('click', undo);
+        
+        confirmYesBtn.addEventListener('click', () => { if (confirmCallback) confirmCallback(true); hideConfirm(); });
+        confirmNoBtn.addEventListener('click', () => { if (confirmCallback) confirmCallback(false); hideConfirm(); });
+        
+        window.addEventListener('resize', resizeCanvas);
+        // Reset idle timer on any user interaction
+        ['click', 'mousedown', 'mousemove', 'touchstart'].forEach(evt => document.body.addEventListener(evt, hideIdleScreen));
+        
+        // --- Start the App ---
+        document.addEventListener('DOMContentLoaded', initializeUI);
+    </script>
+</body>
+</html>
