@@ -183,18 +183,6 @@
             border-radius: 0.5rem;
             font-weight: bold;
         }
-        #logout-view {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            background-color: rgba(20, 20, 20, 0.9);
-            backdrop-filter: blur(8px);
-            padding: 1rem;
-            border-radius: 1rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        #logout-btn { background-color: #ef4444; }
         .admin-mode #admin-key-btn { display: none; }
         .delete-button {
             position: absolute;
@@ -270,10 +258,6 @@
             <input type="password" id="admin-password" placeholder="Password Admin" />
             <button id="login-btn">Login</button>
         </div>
-        <div id="logout-view" class="hidden">
-            <p class="text-white inline-block mr-4">Mode Admin Aktif</p>
-            <button id="logout-btn">Logout</button>
-        </div>
     </div>
 
     <script>
@@ -293,14 +277,10 @@
         const bottomControls = document.getElementById('bottom-controls');
         const body = document.body;
         const toolbar = document.getElementById('toolbar');
-
-        // --- PERUBAHAN JAVASCRIPT UNTUK ADMIN ---
         const adminKeyBtn = document.getElementById('admin-key-btn');
         const adminPasswordInput = document.getElementById('admin-password');
         const loginBtn = document.getElementById('login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
         const loginView = document.getElementById('login-view');
-        const logoutView = document.getElementById('logout-view');
 
         // --- State ---
         let isAdmin = false;
@@ -320,7 +300,6 @@
         function toggleAdminMode(loggedIn) {
             isAdmin = loggedIn;
             body.classList.toggle('admin-mode', loggedIn);
-            logoutView.classList.toggle('hidden', !loggedIn);
             loginView.classList.remove('visible'); // Selalu sembunyikan form saat state berubah
             if (!loggedIn) {
                 adminPasswordInput.value = '';
@@ -342,7 +321,7 @@
             }
         });
 
-        logoutBtn.addEventListener('click', () => toggleAdminMode(false));
+        // Event listener untuk logout tidak lagi diperlukan karena tombolnya sudah dihapus
 
         async function deleteNote(noteId) {
             if (!isAdmin || !adminPassword) {
