@@ -123,6 +123,15 @@
         }
         
         /* --- STYLE UNTUK MODE ADMIN --- */
+        #admin-trigger {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            width: 80px;
+            height: 80px;
+            z-index: 99;
+            cursor: pointer;
+        }
         #admin-panel {
             position: fixed;
             bottom: 20px;
@@ -131,6 +140,13 @@
             display: flex;
             align-items: flex-end;
             gap: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease-in-out;
+        }
+        #admin-panel.visible {
+            opacity: 1;
+            pointer-events: auto;
         }
         #admin-key-btn {
             width: 56px;
@@ -185,7 +201,6 @@
             border-radius: 0.5rem;
             font-weight: bold;
         }
-        .admin-mode #admin-key-btn { display: block; } /* Admin key always visible */
         .admin-action-button {
             position: absolute;
             z-index: 2;
@@ -269,6 +284,9 @@
         Terima kasih! Pesan Anda telah disimpan.
     </div>
 
+    <!-- Secret Admin Trigger Area -->
+    <div id="admin-trigger"></div>
+
     <!-- ADMIN PANEL -->
     <div id="admin-panel">
         <button id="admin-key-btn" title="Admin Login">
@@ -299,6 +317,8 @@
         const toolbar = document.getElementById('toolbar');
         
         // --- Admin Elements ---
+        const adminTrigger = document.getElementById('admin-trigger');
+        const adminPanel = document.getElementById('admin-panel');
         const adminKeyBtn = document.getElementById('admin-key-btn');
         const adminPasswordInput = document.getElementById('admin-password');
         const loginBtn = document.getElementById('login-btn');
@@ -319,6 +339,33 @@
         const IDLE_TIMEOUT = 30000;
 
         // --- Admin Logic ---
+        let adminClickCount = 0;
+        let adminClickTimer;
+
+        adminTrigger.addEventListener('click', () => {
+            // If the panel is already visible, hide it and log out
+            if (adminPanel.classList.contains('visible')) {
+                adminPanel.classList.remove('visible');
+                if (isAdmin) {
+                    toggleAdminMode(false);
+                }
+                return;
+            }
+
+            // Otherwise, run the triple-click logic
+            adminClickCount++;
+            clearTimeout(adminClickTimer);
+
+            if (adminClickCount >= 3) {
+                adminPanel.classList.add('visible');
+                adminClickCount = 0;
+            } else {
+                adminClickTimer = setTimeout(() => {
+                    adminClickCount = 0;
+                }, 1500); // User has 1.5s between clicks
+            }
+        });
+
         function toggleAdminMode(loggedIn) {
             isAdmin = loggedIn;
             body.classList.toggle('admin-mode', loggedIn);
@@ -326,6 +373,8 @@
             if (!loggedIn) {
                 adminPasswordInput.value = '';
                 adminPassword = '';
+                // Also hide the panel on logout/failure
+                adminPanel.classList.remove('visible');
             }
             renderPage();
         }
@@ -374,7 +423,7 @@
             }
         }
 
-        // --- NEW: Export Single Image Logic ---
+        // --- Export Single Image Logic ---
         async function exportSingleImage(imageUrl, noteId) {
             try {
                 // Fetch the image data as a blob to bypass potential CORS issues for download
