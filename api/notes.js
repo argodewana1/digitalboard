@@ -1,71 +1,55 @@
-// file: api/notes.js
+import { Redis } from "@upstash/redis";
 
-import { kv } from '@vercel/kv';
+const redis = new Redis({
+  url: process.env.REDIS_REST_URL,
+  token: process.env.REDIS_TOKEN,
+});
 
-export default async function handler(request, response) {
-    const { method, body } = request;
+export default async function handler(req, res) {
+  const { method, body } = req;
 
-    // Menggunakan variabel environment Vercel untuk koneksi
-    // Pastikan REDIS_URL atau KV_... variables sudah di-set di Vercel
-    if (!process.env.KV_REST_API_URL && !process.env.REDIS_URL) {
-        return response.status(500).json({ error: 'Database connection is not configured.' });
-    }
+  switch (method) {
+    case "GET":
+      try {
+      // Ambil semua note IDs
+        const noteIds = JSON.parse(await redis.get("notes_sorted_set") || "[]");
+        const notes = [];
+        for (const id of noteIds.reverse()) {
+          const data = await redis.get(id);
+          notes.push({ id, data });
+        }
+        return res.status(200).json({ notes });
+      } catch {
+        return res.status(500).json({ error: "Gagal mengambil pesan." });
+      }
 
-    switch (method) {
-        // --- KASUS 1: MENGAMBIL SEMUA PESAN ---
-        case 'GET':
-            try {
-                const noteIds = await kv.zrange('notes_sorted_set', 0, -1, { rev: true });
-                if (noteIds.length === 0) {
-                    return response.status(200).json({ notes: [] });
-                }
-                const pipeline = kv.pipeline();
-                noteIds.forEach(id => pipeline.hgetall(id));
-                const results = await pipeline.exec();
-                const notes = noteIds.map((id, index) => ({
-                    id: id,
-                    data: results[index]?.data // Menambahkan ?. untuk keamanan jika data null
-                }));
-                return response.status(200).json({ notes });
-            } catch (error) {
-                console.error('API GET Error:', error);
-                return response.status(500).json({ error: 'Gagal mengambil pesan.' });
-            }
+    case "POST":
+      try {
+        if (body.note) {
+          const noteId = `note:${Date.now()}`;
+          await redis.set(noteId, body.note);
+          const noteIds = JSON.parse(await redis.get("notes_sorted_set") || "[]");
+          noteIds.push(noteId);
+          await redis.set("notes_sorted_set", JSON.stringify(noteIds));
+          return res.status(201).json({ success: true, id: noteId });
+        } else if (body.id && body.secret) {
+          if (body.secret !== process.env.ADMIN_SECRET_KEY) {
+            return res.status(401).json({ error: "Unauthorized" });
+          }
+          await redis.del(body.id);
+          const noteIds = JSON.parse(await redis.get("notes_sorted_set") || "[]")
+            .filter(id => id !== body.id);
+          await redis.set("notes_sorted_set", JSON.stringify(noteIds));
+          return res.status(200).json({ success: true, message: `Pesan ${body.id} dihapus.` });
+        } else {
+          return res.status(400).json({ error: "Permintaan tidak valid." });
+        }
+      } catch {
+        return res.status(500).json({ error: "Terjadi kesalahan server." });
+      }
 
-        // --- KASUS 2: MENAMBAH ATAU MENGHAPUS PESAN ---
-        case 'POST':
-            try {
-                // Aksi: MENAMBAH PESAN BARU
-                if (body.note) {
-                    const noteId = `note:${Date.now()}`;
-                    const timestamp = Date.now();
-                    const pipeline = kv.pipeline();
-                    pipeline.hset(noteId, { data: body.note });
-                    pipeline.zadd('notes_sorted_set', { score: timestamp, member: noteId });
-                    await pipeline.exec();
-                    return response.status(201).json({ success: true, id: noteId });
-                }
-                // Aksi: MENGHAPUS PESAN
-                else if (body.id && body.secret) {
-                    if (body.secret !== process.env.ADMIN_SECRET_KEY) {
-                        return response.status(401).json({ error: 'Unauthorized' });
-                    }
-                    const pipeline = kv.pipeline();
-                    pipeline.zrem('notes_sorted_set', body.id);
-                    pipeline.del(body.id);
-                    await pipeline.exec();
-                    return response.status(200).json({ success: true, message: `Pesan ${body.id} dihapus.` });
-                }
-                // Jika isi body tidak sesuai
-                return response.status(400).json({ error: 'Permintaan tidak valid.' });
-            } catch (error) {
-                console.error('API POST Error:', error);
-                return response.status(500).json({ error: 'Terjadi kesalahan pada server.' });
-            }
-
-        // --- JIKA METODE BUKAN GET ATAU POST ---
-        default:
-            response.setHeader('Allow', ['GET', 'POST']);
-            return response.status(405).end(`Metode ${method} tidak diizinkan`);
-    }
+    default:
+      res.setHeader("Allow", ["GET", "POST"]);
+      return res.status(405).end(`Metode ${method} tidak diizinkan`);
+  }
 }
