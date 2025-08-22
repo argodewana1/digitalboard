@@ -5,6 +5,12 @@ import { kv } from '@vercel/kv';
 export default async function handler(request, response) {
     const { method, body } = request;
 
+    // Menggunakan variabel environment Vercel untuk koneksi
+    // Pastikan REDIS_URL atau KV_... variables sudah di-set di Vercel
+    if (!process.env.KV_REST_API_URL && !process.env.REDIS_URL) {
+        return response.status(500).json({ error: 'Database connection is not configured.' });
+    }
+
     switch (method) {
         // --- KASUS 1: MENGAMBIL SEMUA PESAN ---
         case 'GET':
@@ -18,11 +24,11 @@ export default async function handler(request, response) {
                 const results = await pipeline.exec();
                 const notes = noteIds.map((id, index) => ({
                     id: id,
-                    data: results[index].data
+                    data: results[index]?.data // Menambahkan ?. untuk keamanan jika data null
                 }));
                 return response.status(200).json({ notes });
             } catch (error) {
-                console.error(error);
+                console.error('API GET Error:', error);
                 return response.status(500).json({ error: 'Gagal mengambil pesan.' });
             }
 
@@ -53,7 +59,7 @@ export default async function handler(request, response) {
                 // Jika isi body tidak sesuai
                 return response.status(400).json({ error: 'Permintaan tidak valid.' });
             } catch (error) {
-                console.error(error);
+                console.error('API POST Error:', error);
                 return response.status(500).json({ error: 'Terjadi kesalahan pada server.' });
             }
 
