@@ -185,44 +185,42 @@
             border-radius: 0.5rem;
             font-weight: bold;
         }
-        #logout-view {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            background-color: rgba(20, 20, 20, 0.9);
-            backdrop-filter: blur(8px);
-            padding: 1rem;
-            border-radius: 1rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        #logout-btn { background-color: #ef4444; }
-        #export-btn { background-color: #16a34a; }
-        .admin-mode #admin-key-btn { display: none; }
-        .delete-button {
+        .admin-mode #admin-key-btn { display: block; } /* Admin key always visible */
+        .admin-action-button {
             position: absolute;
-            top: 10px;
-            right: 10px;
             z-index: 2;
             width: 40px;
             height: 40px;
-            background-color: rgba(239, 68, 68, 0.8);
             color: white;
             border-radius: 50%;
             border: 2px solid white;
             display: none;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            font-size: 20px;
             cursor: pointer;
             transition: all 0.2s ease;
+        }
+        .delete-button {
+            top: 10px;
+            right: 10px;
+            background-color: rgba(239, 68, 68, 0.8);
+            font-size: 20px;
+            font-weight: bold;
         }
         .delete-button:hover {
             background-color: #ef4444;
             transform: scale(1.1);
         }
-        .admin-mode .delete-button { display: flex; }
+        .export-button {
+            top: 10px;
+            left: 10px;
+            background-color: rgba(22, 163, 74, 0.8);
+        }
+        .export-button:hover {
+            background-color: #16a34a;
+            transform: scale(1.1);
+        }
+        .admin-mode .admin-action-button { display: flex; }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -280,14 +278,6 @@
             <input type="password" id="admin-password" placeholder="Password Admin" />
             <button id="login-btn">Login</button>
         </div>
-        <!-- Panel yang muncul setelah admin login -->
-        <div id="logout-view" class="hidden">
-            <p class="text-white font-semibold">Mode Admin</p>
-            <button id="export-btn" title="Ekspor Galeri ke Gambar">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            </button>
-            <button id="logout-btn">Logout</button>
-        </div>
     </div>
 
     <script>
@@ -313,9 +303,6 @@
         const adminPasswordInput = document.getElementById('admin-password');
         const loginBtn = document.getElementById('login-btn');
         const loginView = document.getElementById('login-view');
-        const logoutView = document.getElementById('logout-view');
-        const logoutBtn = document.getElementById('logout-btn');
-        const exportBtn = document.getElementById('export-btn');
 
         // --- State ---
         let isAdmin = false;
@@ -335,7 +322,6 @@
         function toggleAdminMode(loggedIn) {
             isAdmin = loggedIn;
             body.classList.toggle('admin-mode', loggedIn);
-            logoutView.classList.toggle('hidden', !loggedIn);
             loginView.classList.remove('visible'); 
             if (!loggedIn) {
                 adminPasswordInput.value = '';
@@ -356,8 +342,6 @@
                 alert('Silakan masukkan password.');
             }
         });
-
-        logoutBtn.addEventListener('click', () => toggleAdminMode(false));
 
         async function deleteNote(noteId) {
             if (!isAdmin || !adminPassword) {
@@ -390,60 +374,33 @@
             }
         }
 
-        // --- NEW: Export Logic ---
-        async function exportGalleryAsImage() {
-            alert('Mempersiapkan gambar untuk diunduh. Mohon tunggu sebentar...');
-
-            const galleryElement = document.getElementById('gallery');
-            const galleryRect = galleryElement.getBoundingClientRect();
-
-            // Create an off-screen canvas
-            const exportCanvas = document.createElement('canvas');
-            const exportCtx = exportCanvas.getContext('2d');
-            
-            // Set canvas dimensions
-            exportCanvas.width = galleryRect.width;
-            exportCanvas.height = galleryRect.height;
-
-            // Fill background
-            exportCtx.fillStyle = 'white';
-            exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-
-            const imageElements = galleryElement.querySelectorAll('.grid-item img');
-            const promises = [];
-
-            imageElements.forEach(imgEl => {
-                const promise = new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.crossOrigin = 'Anonymous'; // Handle potential CORS issues
-                    img.src = imgEl.src;
-                    img.onload = () => {
-                        const itemRect = imgEl.parentElement.getBoundingClientRect();
-                        const x = itemRect.left - galleryRect.left;
-                        const y = itemRect.top - galleryRect.top;
-                        exportCtx.drawImage(img, x, y, itemRect.width, itemRect.height);
-                        resolve();
-                    };
-                    img.onerror = reject;
-                });
-                promises.push(promise);
-            });
-
+        // --- NEW: Export Single Image Logic ---
+        async function exportSingleImage(imageUrl, noteId) {
             try {
-                await Promise.all(promises);
-
-                // Trigger download
+                // Fetch the image data as a blob to bypass potential CORS issues for download
+                const response = await fetch(imageUrl);
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                
                 const link = document.createElement('a');
-                link.download = `PapanPesanDigital-${new Date().toISOString().slice(0,10)}.png`;
-                link.href = exportCanvas.toDataURL('image/png');
+                link.href = url;
+                // Create a cleaner filename
+                const filename = `pesan-${noteId.replace('notes/', '').replace('.png', '')}.png`;
+                link.download = filename;
+                
+                // Append to body to ensure it's clickable, click, and then remove
+                document.body.appendChild(link);
                 link.click();
+                document.body.removeChild(link);
+
+                // Clean up the object URL
+                window.URL.revokeObjectURL(url);
             } catch (error) {
-                console.error("Gagal mengekspor galeri:", error);
-                alert("Maaf, terjadi kesalahan saat membuat gambar. Silakan coba lagi.");
+                console.error('Gagal mengunduh gambar:', error);
+                alert('Gagal mengunduh gambar. Anda bisa coba klik kanan pada gambar dan pilih "Simpan Gambar Sebagai..."');
             }
         }
-
-        exportBtn.addEventListener('click', exportGalleryAsImage);
 
         // --- API & Rendering Logic ---
         async function fetchNotes() {
@@ -491,8 +448,9 @@
                 itemDiv.appendChild(img);
 
                 if (isAdmin) {
+                    // Add Delete Button
                     const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'delete-button';
+                    deleteBtn.className = 'admin-action-button delete-button';
                     deleteBtn.innerHTML = '&times;';
                     deleteBtn.title = 'Hapus pesan ini';
                     deleteBtn.onclick = (e) => {
@@ -500,6 +458,17 @@
                         deleteNote(note.id);
                     };
                     itemDiv.appendChild(deleteBtn);
+
+                    // Add Export Button
+                    const exportBtn = document.createElement('button');
+                    exportBtn.className = 'admin-action-button export-button';
+                    exportBtn.title = 'Ekspor gambar ini';
+                    exportBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+                    exportBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        exportSingleImage(note.data, note.id);
+                    };
+                    itemDiv.appendChild(exportBtn);
                 }
                 
                 gallery.appendChild(itemDiv);
