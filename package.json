@@ -1,0 +1,12 @@
+{
+  "name": "digitalboard",
+  "version": "1.0.0",
+  "description": "Digital message board application",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve"
+  },
+  "dependencies": {
+    "@vercel/blob": "latest"
+  }
+}
