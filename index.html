@@ -253,6 +253,7 @@
         const typingHeading = document.getElementById('typing-heading');
         const bottomControls = document.getElementById('bottom-controls');
         const body = document.body;
+        const toolbar = document.getElementById('toolbar'); // Tambahkan referensi ke toolbar
 
         // --- Admin DOM Elements ---
         const adminPasswordInput = document.getElementById('admin-password');
@@ -455,8 +456,27 @@
             } catch (error) { alert("Gagal menyimpan pesan."); } finally { submitBtn.disabled = false; }
         }
         
-        function openCanvasView() { clearInterval(slideshowInterval); hideIdleScreen(); canvasContainer.classList.remove('hidden'); gallerySection.style.opacity = '0'; bottomControls.classList.add('hidden'); requestAnimationFrame(() => { resizeCanvas(); clearCanvas(); }); }
-        function closeCanvasView() { canvasContainer.classList.add('hidden'); gallerySection.style.opacity = '1'; bottomControls.classList.remove('hidden'); renderPage(); resetIdleTimer(); }
+        // --- PERBAIKAN DI SINI ---
+        function openCanvasView() {
+            clearInterval(slideshowInterval);
+            hideIdleScreen();
+            canvasContainer.classList.remove('hidden');
+            gallerySection.style.opacity = '0';
+            bottomControls.classList.add('hidden');
+            toolbar.classList.add('visible'); // <-- Baris ini ditambahkan
+            requestAnimationFrame(() => {
+                resizeCanvas();
+                clearCanvas();
+            });
+        }
+        function closeCanvasView() {
+            canvasContainer.classList.add('hidden');
+            gallerySection.style.opacity = '1';
+            bottomControls.classList.remove('hidden');
+            toolbar.classList.remove('visible'); // <-- Baris ini ditambahkan
+            renderPage();
+            resetIdleTimer();
+        }
         
         // --- Drawing Functions ---
         const undoBtn = document.querySelector('#undo-btn');
