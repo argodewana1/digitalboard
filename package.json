@@ -2,6 +2,7 @@
   "name": "digital-guestbook-server",
   "version": "1.0.0",
   "dependencies": {
-    "@vercel/kv": "^1.0.1"
+    "@upstash/redis": "^1.28.3", 
+    "next": "14.2.3"
   }
 }
