@@ -122,18 +122,54 @@
             50% { background-color: #003366; }
         }
         
-        /* --- STYLE BARU UNTUK MODE ADMIN --- */
+        /* --- PERUBAHAN STYLE UNTUK MODE ADMIN --- */
         #admin-panel {
             position: fixed;
             bottom: 20px;
             left: 20px;
             z-index: 100;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        #admin-key-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        #admin-key-btn:hover {
+            background-color: rgba(40, 40, 40, 0.9);
+            transform: scale(1.1);
+        }
+        #login-view {
+            display: flex;
+            gap: 8px;
+            align-items: center;
             background-color: rgba(20, 20, 20, 0.9);
             backdrop-filter: blur(8px);
             padding: 1rem;
             border-radius: 1rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0;
+            transform: translateX(-10px);
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        #login-view.visible {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
         }
         #admin-panel input {
             background-color: #333;
@@ -149,8 +185,19 @@
             border-radius: 0.5rem;
             font-weight: bold;
         }
+        #logout-view {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background-color: rgba(20, 20, 20, 0.9);
+            backdrop-filter: blur(8px);
+            padding: 1rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
         #logout-btn { background-color: #ef4444; }
-
+        .admin-mode #admin-key-btn { display: none; }
         .delete-button {
             position: absolute;
             top: 10px;
@@ -162,7 +209,7 @@
             color: white;
             border-radius: 50%;
             border: 2px solid white;
-            display: none; /* Sembunyi secara default */
+            display: none;
             align-items: center;
             justify-content: center;
             font-weight: bold;
@@ -174,9 +221,7 @@
             background-color: #ef4444;
             transform: scale(1.1);
         }
-        .admin-mode .delete-button {
-            display: flex; /* Tampil saat mode admin aktif */
-        }
+        .admin-mode .delete-button { display: flex; }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -225,9 +270,12 @@
         Terima kasih! Pesan Anda telah disimpan.
     </div>
 
-    <!-- Admin Panel -->
+    <!-- PERUBAHAN HTML UNTUK ADMIN PANEL -->
     <div id="admin-panel">
-        <div id="login-view">
+        <button id="admin-key-btn" title="Admin Login">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        </button>
+        <div id="login-view" class="hidden">
             <input type="password" id="admin-password" placeholder="Password Admin" />
             <button id="login-btn">Login</button>
         </div>
@@ -253,9 +301,10 @@
         const typingHeading = document.getElementById('typing-heading');
         const bottomControls = document.getElementById('bottom-controls');
         const body = document.body;
-        const toolbar = document.getElementById('toolbar'); // Tambahkan referensi ke toolbar
+        const toolbar = document.getElementById('toolbar');
 
-        // --- Admin DOM Elements ---
+        // --- PERUBAHAN JAVASCRIPT UNTUK ADMIN ---
+        const adminKeyBtn = document.getElementById('admin-key-btn');
         const adminPasswordInput = document.getElementById('admin-password');
         const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
@@ -280,14 +329,18 @@
         function toggleAdminMode(loggedIn) {
             isAdmin = loggedIn;
             body.classList.toggle('admin-mode', loggedIn);
-            loginView.classList.toggle('hidden', loggedIn);
             logoutView.classList.toggle('hidden', !loggedIn);
+            loginView.classList.remove('visible'); // Selalu sembunyikan form saat state berubah
             if (!loggedIn) {
                 adminPasswordInput.value = '';
                 adminPassword = '';
             }
             renderPage();
         }
+        
+        adminKeyBtn.addEventListener('click', () => {
+            loginView.classList.toggle('visible');
+        });
 
         loginBtn.addEventListener('click', () => {
             if (adminPasswordInput.value) {
@@ -456,14 +509,13 @@
             } catch (error) { alert("Gagal menyimpan pesan."); } finally { submitBtn.disabled = false; }
         }
         
-        // --- PERBAIKAN DI SINI ---
         function openCanvasView() {
             clearInterval(slideshowInterval);
             hideIdleScreen();
             canvasContainer.classList.remove('hidden');
             gallerySection.style.opacity = '0';
             bottomControls.classList.add('hidden');
-            toolbar.classList.add('visible'); // <-- Baris ini ditambahkan
+            toolbar.classList.add('visible');
             requestAnimationFrame(() => {
                 resizeCanvas();
                 clearCanvas();
@@ -473,7 +525,7 @@
             canvasContainer.classList.add('hidden');
             gallerySection.style.opacity = '1';
             bottomControls.classList.remove('hidden');
-            toolbar.classList.remove('visible'); // <-- Baris ini ditambahkan
+            toolbar.classList.remove('visible');
             renderPage();
             resetIdleTimer();
         }
