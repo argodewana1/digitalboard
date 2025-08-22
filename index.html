@@ -4,7 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Papan Pesan Digital - Prof. Dr. H. Sukadiono, dr., MM.</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
@@ -120,7 +122,7 @@
             50% { background-color: #003366; }
         }
         
-        /* --- PERUBAHAN STYLE UNTUK MODE ADMIN --- */
+        /* --- STYLE UNTUK MODE ADMIN --- */
         #admin-panel {
             position: fixed;
             bottom: 20px;
@@ -183,6 +185,19 @@
             border-radius: 0.5rem;
             font-weight: bold;
         }
+        #logout-view {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background-color: rgba(20, 20, 20, 0.9);
+            backdrop-filter: blur(8px);
+            padding: 1rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        #logout-btn { background-color: #ef4444; }
+        #export-btn { background-color: #16a34a; }
         .admin-mode #admin-key-btn { display: none; }
         .delete-button {
             position: absolute;
@@ -212,11 +227,14 @@
 </head>
 <body class="bg-gray-900 text-white">
 
+    <!-- Main Container with Background -->
     <div class="main-container"></div>
 
+    <!-- Gallery Section Wrapper -->
     <div id="gallery-section" class="absolute top-[11.1%] left-[28.1%] w-[65.1%] h-[74.1%]">
         <div class="grid-gallery" id="gallery">
-            </div>
+            <!-- Pesan akan dimuat di sini oleh JavaScript -->
+        </div>
         <div id="idle-screen" class="absolute inset-0 flex items-center justify-center p-12 opacity-0 pointer-events-none cursor-pointer">
             <div class="text-center">
                 <h1 id="typing-heading" class="text-5xl font-bold mb-4" style="font-family: 'Playfair Display', serif;"></h1>
@@ -232,6 +250,7 @@
         </div>
     </div>
 
+    <!-- Canvas Section (hidden by default) -->
     <div id="canvas-container" class="hidden">
         <canvas id="drawing-canvas"></canvas>
         <div id="toolbar" class="toolbar-touch">
@@ -239,6 +258,7 @@
         </div>
     </div>
 
+    <!-- Modal for viewing a single message -->
     <div id="modal-view" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden items-center justify-center p-8 transition-opacity duration-300">
         <div class="relative w-full max-w-6xl max-h-full">
             <img id="modal-img" src="" alt="Preview Pesan" class="block w-full h-full object-contain">
@@ -246,10 +266,12 @@
         </div>
     </div>
 
+    <!-- "Thank You" Toast Notification -->
     <div id="thank-you-toast" class="fixed top-10 left-1/2 -translate-x-1/2 bg-green-500 text-white px-8 py-4 rounded-full shadow-lg text-xl font-bold z-50 transition-all duration-500 opacity-0 -translate-y-20">
         Terima kasih! Pesan Anda telah disimpan.
     </div>
 
+    <!-- ADMIN PANEL -->
     <div id="admin-panel">
         <button id="admin-key-btn" title="Admin Login">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
@@ -257,6 +279,14 @@
         <div id="login-view" class="hidden">
             <input type="password" id="admin-password" placeholder="Password Admin" />
             <button id="login-btn">Login</button>
+        </div>
+        <!-- Panel yang muncul setelah admin login -->
+        <div id="logout-view" class="hidden">
+            <p class="text-white font-semibold">Mode Admin</p>
+            <button id="export-btn" title="Ekspor Galeri ke Gambar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+            <button id="logout-btn">Logout</button>
         </div>
     </div>
 
@@ -277,10 +307,15 @@
         const bottomControls = document.getElementById('bottom-controls');
         const body = document.body;
         const toolbar = document.getElementById('toolbar');
+        
+        // --- Admin Elements ---
         const adminKeyBtn = document.getElementById('admin-key-btn');
         const adminPasswordInput = document.getElementById('admin-password');
         const loginBtn = document.getElementById('login-btn');
         const loginView = document.getElementById('login-view');
+        const logoutView = document.getElementById('logout-view');
+        const logoutBtn = document.getElementById('logout-btn');
+        const exportBtn = document.getElementById('export-btn');
 
         // --- State ---
         let isAdmin = false;
@@ -300,7 +335,8 @@
         function toggleAdminMode(loggedIn) {
             isAdmin = loggedIn;
             body.classList.toggle('admin-mode', loggedIn);
-            loginView.classList.remove('visible'); // Selalu sembunyikan form saat state berubah
+            logoutView.classList.toggle('hidden', !loggedIn);
+            loginView.classList.remove('visible'); 
             if (!loggedIn) {
                 adminPasswordInput.value = '';
                 adminPassword = '';
@@ -321,7 +357,7 @@
             }
         });
 
-        // Event listener untuk logout tidak lagi diperlukan karena tombolnya sudah dihapus
+        logoutBtn.addEventListener('click', () => toggleAdminMode(false));
 
         async function deleteNote(noteId) {
             if (!isAdmin || !adminPassword) {
@@ -353,6 +389,61 @@
                 alert('Terjadi kesalahan jaringan.');
             }
         }
+
+        // --- NEW: Export Logic ---
+        async function exportGalleryAsImage() {
+            alert('Mempersiapkan gambar untuk diunduh. Mohon tunggu sebentar...');
+
+            const galleryElement = document.getElementById('gallery');
+            const galleryRect = galleryElement.getBoundingClientRect();
+
+            // Create an off-screen canvas
+            const exportCanvas = document.createElement('canvas');
+            const exportCtx = exportCanvas.getContext('2d');
+            
+            // Set canvas dimensions
+            exportCanvas.width = galleryRect.width;
+            exportCanvas.height = galleryRect.height;
+
+            // Fill background
+            exportCtx.fillStyle = 'white';
+            exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            const imageElements = galleryElement.querySelectorAll('.grid-item img');
+            const promises = [];
+
+            imageElements.forEach(imgEl => {
+                const promise = new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous'; // Handle potential CORS issues
+                    img.src = imgEl.src;
+                    img.onload = () => {
+                        const itemRect = imgEl.parentElement.getBoundingClientRect();
+                        const x = itemRect.left - galleryRect.left;
+                        const y = itemRect.top - galleryRect.top;
+                        exportCtx.drawImage(img, x, y, itemRect.width, itemRect.height);
+                        resolve();
+                    };
+                    img.onerror = reject;
+                });
+                promises.push(promise);
+            });
+
+            try {
+                await Promise.all(promises);
+
+                // Trigger download
+                const link = document.createElement('a');
+                link.download = `PapanPesanDigital-${new Date().toISOString().slice(0,10)}.png`;
+                link.href = exportCanvas.toDataURL('image/png');
+                link.click();
+            } catch (error) {
+                console.error("Gagal mengekspor galeri:", error);
+                alert("Maaf, terjadi kesalahan saat membuat gambar. Silakan coba lagi.");
+            }
+        }
+
+        exportBtn.addEventListener('click', exportGalleryAsImage);
 
         // --- API & Rendering Logic ---
         async function fetchNotes() {
