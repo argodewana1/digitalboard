@@ -4,9 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Papan Pesan Digital - Prof. Dr. H. Sukadiono, dr., MM.</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
@@ -226,14 +224,11 @@
 </head>
 <body class="bg-gray-900 text-white">
 
-    <!-- Main Container with Background -->
     <div class="main-container"></div>
 
-    <!-- Gallery Section Wrapper -->
     <div id="gallery-section" class="absolute top-[11.1%] left-[28.1%] w-[65.1%] h-[74.1%]">
         <div class="grid-gallery" id="gallery">
-            <!-- Pesan akan dimuat di sini oleh JavaScript -->
-        </div>
+            </div>
         <div id="idle-screen" class="absolute inset-0 flex items-center justify-center p-12 opacity-0 pointer-events-none cursor-pointer">
             <div class="text-center">
                 <h1 id="typing-heading" class="text-5xl font-bold mb-4" style="font-family: 'Playfair Display', serif;"></h1>
@@ -249,7 +244,6 @@
         </div>
     </div>
 
-    <!-- Canvas Section (hidden by default) -->
     <div id="canvas-container" class="hidden">
         <canvas id="drawing-canvas"></canvas>
         <div id="toolbar" class="toolbar-touch">
@@ -257,7 +251,6 @@
         </div>
     </div>
 
-    <!-- Modal for viewing a single message -->
     <div id="modal-view" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden items-center justify-center p-8 transition-opacity duration-300">
         <div class="relative w-full max-w-6xl max-h-full">
             <img id="modal-img" src="" alt="Preview Pesan" class="block w-full h-full object-contain">
@@ -265,12 +258,10 @@
         </div>
     </div>
 
-    <!-- "Thank You" Toast Notification -->
     <div id="thank-you-toast" class="fixed top-10 left-1/2 -translate-x-1/2 bg-green-500 text-white px-8 py-4 rounded-full shadow-lg text-xl font-bold z-50 transition-all duration-500 opacity-0 -translate-y-20">
         Terima kasih! Pesan Anda telah disimpan.
     </div>
 
-    <!-- PERUBAHAN HTML UNTUK ADMIN PANEL -->
     <div id="admin-panel">
         <button id="admin-key-btn" title="Admin Login">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
