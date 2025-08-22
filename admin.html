@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+
+    <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md text-center">
+        <h1 class="text-3xl font-bold mb-6">Remote Control</h1>
+        <p class="text-gray-400 mb-8">Gunakan halaman ini untuk menghapus semua pesan di papan digital.</p>
+        
+        <div class="mb-6">
+            <label for="secret-key" class="block text-left mb-2 text-gray-300">Password Admin:</label>
+            <input type="password" id="secret-key" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="••••••••••">
+        </div>
+
+        <button id="delete-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-lg transition-colors duration-300 text-lg">
+            Hapus Semua Pesan
+        </button>
+
+        <p id="status-message" class="mt-6 text-lg h-6"></p>
+    </div>
+
+    <script>
+        const deleteBtn = document.getElementById('delete-btn');
+        const secretKeyInput = document.getElementById('secret-key');
+        const statusMessage = document.getElementById('status-message');
+
+        deleteBtn.addEventListener('click', async () => {
+            const secret = secretKeyInput.value;
+            if (!secret) {
+                alert('Silakan masukkan password.');
+                return;
+            }
+
+            const confirmed = confirm('APAKAH ANDA YAKIN? Semua pesan akan dihapus secara permanen dan tidak dapat dikembalikan.');
+
+            if (confirmed) {
+                statusMessage.textContent = 'Menghapus...';
+                statusMessage.className = 'mt-6 text-lg h-6 text-yellow-400';
+                deleteBtn.disabled = true;
+
+                try {
+                    const response = await fetch('/api/delete-all-notes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ secret: secret })
+                    });
+
+                    if (response.ok) {
+                        statusMessage.textContent = 'Sukses! Semua pesan telah dihapus.';
+                        statusMessage.className = 'mt-6 text-lg h-6 text-green-400';
+                        secretKeyInput.value = '';
+                    } else if (response.status === 401) {
+                        statusMessage.textContent = 'Gagal! Password salah.';
+                        statusMessage.className = 'mt-6 text-lg h-6 text-red-400';
+                    } else {
+                        throw new Error('Server error');
+                    }
+                } catch (error) {
+                    statusMessage.textContent = 'Terjadi kesalahan jaringan.';
+                    statusMessage.className = 'mt-6 text-lg h-6 text-red-400';
+                } finally {
+                    deleteBtn.disabled = false;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
